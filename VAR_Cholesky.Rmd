@@ -55,14 +55,13 @@ plot.ts(data)
 
 We estimate the VAR and estimate the SVAR - sturctural impulse responses with packages.
 
-```{r VAR_packages, include = TRUE, warning=FALSE}
-#--------------------- Manual Calculation -------------------------
+```{r SVAR_package, include = TRUE, warning=FALSE}
 #VAR estimation
-var.est1 <- VAR(data, p = 3,type = "cons")
+var.est1 <- vars::VAR(data, p = 3,type = "cons")
 
 # Setting up the SVAR with Cholesky decomposition
 a.mat <- diag(5)
-diag(a.mat) <- NA
+diag(a.mat) <- 1
 a.mat[2, 1] <- NA
 a.mat[3, 1] <- NA
 a.mat[3, 2] <- NA
@@ -121,7 +120,9 @@ plot(two.int.u, main = "Response of u to monetary policy shock")
 ```
 
 Note that ~ is a shorthand for function(.x). We estimate a VAR algebraically, using OLS. 
-First method is the matrix way, whereas the second is done equation by equation. 
+First method is the matrix way, whereas the second is done equation by equation. Notice that the two methods are virtually the same. 
+Whereas you pull the diagonal elements from the varcov matrix in the first case and look at square roots, you just make up a matrix 
+out of the varcov for each individual regression. 
 ```{r VAR_manually, include = TRUE}
 #---------------------- Getting the right dataframes ----------------------------
 lagged_data <- data %>%
@@ -137,17 +138,22 @@ clean_frame <- na.omit(lagged_data)
 Y <- as.matrix(clean_frame[, c("carbon","p", "u", "y", "i")])
 regressors <- grep("_lag", names(clean_frame), value=TRUE)
 X <- as.matrix(clean_frame[, c(regressors, "cons")])
+Y <- t(Y)
+X <- t(X)
 #-------------------------------- OLS - matrix ------------------------------------------
-B_hat <- solve(t(X)%*%X)%*%t(X)%*%Y #OLS matrix (X'X)^-1 X'Y
-U_hat <- Y-X%*%B_hat #residual matrix
-T <- nrow(X) #nobs
-Sigma_u <- (t(U_hat) %*% U_hat)/ (T-ncol(X)) #variance covariance matrix of residuals
-invXtX <- solve(t(X)%*% X)
+B_hat <- Y%*%t(X)%*%solve(X%*%t(X)) #OLS matrix (X'X)^-1 X'Y
+U_hat <- Y-B_hat%*%X #residual matrix
+T <- ncol(X) #nobs
+Sigma_u <- (U_hat %*% t(U_hat))/ (T-nrow(X)) #variance covariance matrix of residuals
+invXtX <- solve(X%*% t(X))
 vcov_B <- kronecker(Sigma_u, invXtX) #variance covariance matrix of regression coefficient
 std_err <- sqrt(diag(vcov_B))
-se_matrix <- matrix(std_err, nrow = nrow(B_hat), ncol = ncol(B_hat))
-colnames(se_matrix) <- colnames(B_hat)
-rownames(se_matrix) <- colnames(X)
+se_matrix <- matrix(std_err, nrow = nrow(B_hat), ncol = ncol(B_hat), byrow=TRUE)
+colnames(se_matrix) <- rownames(X)
+rownames(se_matrix) <- rownames(B_hat)
+
+#VAR estimation
+var.est1 <- vars::VAR(data, p = 3,type = "const")
 results <- var.est1
 
 # Extract standard errors for each equation
@@ -156,7 +162,7 @@ se_list <- lapply(results$varresult, function(eq_summary) {
   coef_table[, "Std. Error"]
 })
 coef <- var.est1$varresult$carbon$coefficients
-
+coef
 #-------------------------------- OLS - eq-by-eq ------------------------------------------
 carbon_reg <- lm(carbon ~ carbon_lag1 + carbon_lag2+carbon_lag3+p_lag1+p_lag2+p_lag3+u_lag1+u_lag2+u_lag3+y_lag1+y_lag2+y_lag3+i_lag1+i_lag2+i_lag3, data=lagged_data)
 p_reg <- lm(p ~ carbon_lag1 + carbon_lag2+carbon_lag3+p_lag1+p_lag2+p_lag3+u_lag1+u_lag2+u_lag3+y_lag1+y_lag2+y_lag3+i_lag1+i_lag2+i_lag3, data=lagged_data)
@@ -175,8 +181,117 @@ se_u_reg <- sqrt(diag(vcov_u_reg))
 se_i_reg <- sqrt(diag(vcov_i_reg))
 ```
 
+```{r VAR_shocks, include=TRUE}
+#--------------- Manual structural shock from a recursive VAR  -----------------
+residuals_var <- residuals(var.est1)
+residuals_var
+T <- nrow(residuals_var)
+vcov <- t(residuals_var)%*%residuals_var/(T-15) #need also small sample adjustment
+vcov(var.est1)
+P <- chol(vcov) #t(P)=solve(svar.one$A)%*%svar.one$B
+P <- t(P) 
+P
+diagonal_elements <- diag(P)
+D <- array(0,dim=c(5,5))
+diag(D) <- diagonal_elements
+standardized_matrix <- P%*%solve(D)
+solve(standardized_matrix) #v tem primeru sta enaka A in B!
+svar.one$A
+structural_matrix <- solve(svar.one$A)%*%svar.one$B
+structural_matrix
+#----------------------- STRUCTURAL SHOCKS ---------------------------
+structural_shocks <- solve(structural_matrix)%*%t(residuals_var)
+#oziroma
+structural_shocks <- solve(P)%*%t(residuals_var)
+structural_shocks <- as.data.frame(t(structural_shocks))
+plot(structural_shocks$carbon)
+plot(structural_shocks$i)
+carbon_shock <- ts(structural_shocks$carbon, start=c(2000,3), frequency=12)
+monetary_shock <- ts(structural_shocks$i, start=c(2000,3), frequency=12)
+plot(carbon_shock)
+carbon_plot <- autoplot(carbon_shock, color="blue") + theme_bw()+ theme(panel.grid = element_blank(),  
+                                                        axis.text = element_text(color = "black", size =13),   plot.title = element_text(hjust = 0.5, size = 15),
+                                                        axis.title.x = element_text(size = 15),   panel.border = element_rect(color = "black", linewidth = 1)) + ggtitle("Carbon policy shock") + ylab("") + xlab("Year")
+monetary_plot <- autoplot(monetary_shock, color="blue") + theme_bw()+ theme(panel.grid = element_blank(),  
+                                                              axis.text = element_text(color = "black", size =13),   plot.title = element_text(hjust = 0.5, size = 15),
+                                                              axis.title.x = element_text(size = 15),   panel.border = element_rect(color = "black", linewidth = 1)) + ggtitle("Monetary policy shock")+ ylab("")+ xlab("Year")
+shock_plot <- carbon_plot + monetary_plot
+shock_plot
+plot(shock_plot)
+ggsave("Output/shock_plot.pdf", plot = shock_plot, width = 10, height = 3, dpi = 600)
+getwd()
+#-------------------------- IRFs ročno -------------------------------
+irf <- Phi(var.est1,nstep=39)
+nstep <- abs(as.integer(39)) 
+  K <- 5 #določi koliko maš y
+  p <- 3 #določi koliko je endogenih lagov
+  A <- as.array(Acoef(var.est1)) #vsi ocenjeni koeficienti v A matrikah
+  if(nstep >= p){
+    As <- array(0, dim = c(K, K, nstep + 1))
+    for(i in (p + 1):(nstep + 1)){ #create nstep matrices filled with zeros
+      As[, , i] <- matrix(0, nrow = K, ncol = K)
+    }
+  } else {
+    As <- array(0, dim = c(K, K, p))
+  }
+  for(i in 1:p){
+    As[, , i] <- A[[i]] #fill the first p matrices with actual coefficients
+  }  
+  Phi <- array(0, dim=c(K, K, nstep + 1))
+  Phi[, ,1] <- diag(K)
+  Phi[, , 2] <- Phi[, , 1] %*% As[, , 1]
+  if (nstep > 1) {
+    for (i in 3:(nstep + 1)) {
+      tmp1 <- Phi[, , 1] %*% As[, , i-1]
+      tmp2 <- matrix(0, nrow = K, ncol = K)
+      idx <- (i - 2):1
+      for (j in 1:(i - 2)) {
+        tmp2 <- tmp2 + Phi[, , j+1] %*% As[, , idx[j]]
+      }
+      Phi[, , i] <- tmp1 + tmp2
+    }
+  }
+  return(Phi)
+}
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+#----------------------------- Structural impulse responses z
+rownames(irf) <- c("carbon", "p", "u", "y", "i")
+for(i in 1: dim(irf)[3]){
+  irf[, , i] <- irf[, , i] %*%  P%*%solve(D) #this is how you get one unit shock impulse responses! - one unit shock to y!!! in our case carbon shock
+}
+irf_carbon = array(0, dim=c(5,40))
+for(i in 1:dim(irf)[3]){
+  irf_carbon[,i] <- irf[1:5,1,i]
+}
+# Loop through each row and plot
+for (i in 1:nrow(irf_carbon)) {  # Corrected syntax
+  plot(irf_carbon[i, ], type = "o", col = "blue", main = paste("Plot for Row", i), xlab = "Index", ylab = "Value")
+}
+irf
+structural_shock <- array(NA, dim=c(240,1))
+structural_shock[4:240,] <- structural_shocks[1,]
+structural_shock <- as.data.frame(structural_shock)
+structural_shock <- as.data.frame(structural_carbon)
+irf_carbon <- as.data.frame(irf_carbon)
+rownames(irf_carbon) <- c("Carbon", "Output", "Unemployment", "Inflation", "Interest rate")
+colnames(irf_carbon) <- 1:40
+irf_carbon <- t(irf_carbon)
+irf_carbon <- as.data.frame(irf_carbon)
+Response_carbon <- irf_carbon[,1]
+Response_carbon <- as.data.frame(Response_carbon)
+Response_carbon$Period <- 1:40 
+plot <- ggplot(Response_carbon, aes(x = Period, y = Response_carbon)) + 
+  geom_line() +
+  theme_bw() + 
+  labs(title = "Impulse Response of Carbon", x = "Period", y="") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10, color="black"),
+    panel.grid=element_blank()
+  )
+plot
+boot()
+irf
 ```
 
