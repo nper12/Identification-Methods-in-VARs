@@ -1,8 +1,9 @@
-.Rproj.user
-.Rhistory
-.RData
-.Ruserdata
-.aux
-.log
-.synctex.gz
-.bbl
+*.Rproj.user
+*.Rhistory
+*.RData
+*.Ruserdata
+*.aux
+*.log
+*.synctex.gz
+*.bbl
+.DS_Store

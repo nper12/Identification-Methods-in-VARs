@@ -1,0 +1,238 @@
+\documentclass[a4paper, 12pt]{article}
+\renewcommand{\baselinestretch}{1.2} %line spacing
+\usepackage[a4paper]{geometry}
+\usepackage{enumitem}
+\usepackage{comment}
+\usepackage{mathtools}
+\usepackage{amsfonts} %Defines extra environments for multiline displayed equations, as well as a number of other enhancements for math (includes the amstext, amsbsy, and amsopn packages).
+\usepackage{amssymb} %arrows, operators, special characters, geometric figures etc.
+\usepackage{amsmath} %improve the structure and information in our document with displayed equations and mathematical stuff
+%\usepackage[singlespacing]{setspace} 
+\geometry{left=2.54cm,right=2.54cm,top=2.54cm,bottom=2.54cm, includefoot}
+\setlength{\footskip}{2cm}
+\makeatletter
+\renewcommand\section{\@startsection{section}{1}{\z@}%
+                                      {24pt}%
+                                      {12pt}%
+                                      {\normalsize\bfseries}}
+\renewcommand\subsection{\@startsection{subsection}{2}{\z@}%
+                                     {12pt}% before section header space -1.0ex\@plus -1ex \@minus -.4ex
+                                     {12pt}%after section header space 1.0ex \@plus .2ex
+                                     {\center\normalfont\normalsize\bfseries}}% from \large
+\renewcommand\subsubsection{\@startsection{subsubsection}{3}{\z@}%
+                                     {0pt}%-1.0ex\@plus -1ex \@minus -.4ex
+                                     {1pt}%1.0ex \@plus .2ex
+                                     {\center\normalfont\normalsize\bfseries}}% from \normalsize
+\makeatother
+%\fontfamily{crm}
+\pagenumbering{arabic}
+%\usepackage{newtxtext, newtxmath}
+%\pagenumbering{gobble}
+
+\begin{document}
+
+\begin{center}
+\large\bfseries{Notes on Identification in Vector Autoregressions} 
+\end{center}
+\begin{center}
+\textbf{1. Reduced Form Vector Autoregression}
+\end{center}
+
+\noindent We want to estimate a simple VAR which can be written as:
+\begin{equation}
+\begin{aligned}
+y_{t} &=\nu+A_1 y_{t-1}+A_2 y_{t-2}+...+A_p y_{t-p}+u_t \nonumber
+\end{aligned}
+\end{equation}
+or 
+\begin{equation}
+\begin{aligned}
+Y_t &=[\nu \ A_1 \ A_2 \ ...]X_{t-1}+U_t \nonumber
+\end{aligned}
+\end{equation}
+where $Y_t$ and $U_t$ of the dimension $N\times T$ and $X_{t-1}$ is $[1 \ y_{t-1} \ y_{t-2} \ ...]'$ and of the dimension $(Np+1)\times T$. In R, you additionally need to take care of the rows that are not included in the estimation, so the actual dataframe are smaller for rows where $NA$ is present. 
+This happens when you create lagged variables (for $p=1 \ (2)$ first (second) row is taken away etc.). When you have the two dataframes - $Y$ and $X$, you estimate the coefficient with the least squares (henceforth: LS) estimator.  
+The LS minimizes the squared error of the model. In stylized terms, this means:
+\begin{equation}
+\begin{aligned}
+U_tU'_t&=(Y-AX)(Y-AX)' \nonumber \\
+&= YY'-YX'A'+AXY' + AXX'A' \nonumber \\
+\frac{\partial U_tU_t'}{ \partial A} &= -2XY'+2AXX'=0\\
+&=YX'+AXX'=0 \\
+YX'&=AXX' \\
+\hat{A}&=YX'(XX')^{-1}=[\hat{\nu} \ \hat{A}_1 \ \hat{A}_2 \ ...]
+\end{aligned}
+\end{equation}
+where $\hat{A}$ is of the dimension $N\times(Np+1)$. This gives us our reduced form coefficient estimates. While our residual matrix is naturally:
+\begin{equation}
+\begin{aligned}
+\hat{U}_t=Y_t-\hat{A}X_{t-1} \nonumber
+\end{aligned}
+\end{equation}
+The residual variance-covariance matrix $\hat{\Sigma}_u$ is calculated as:
+\begin{equation}
+\begin{aligned}
+\hat{\Sigma}_u = \frac{\hat{U_t}\hat{U_t}'}{T-Np-1} \nonumber 
+\end{aligned}
+\end{equation}
+and is of the dimension $N \times N$, while the coefficient variance covariance is calculated as $\hat{\Sigma}_u \times (X'X)^{-1}$, a Kronecker product:
+\begin{equation}
+\begin{aligned}
+\hat{\Sigma}_A = \hat{\Sigma}_u \times (XX')^{-1} \nonumber 
+\end{aligned}
+\end{equation}
+which is of the $N(Np+1) \times N(Np+1)$ dimension. This follows from the derivation for the variance covariance estimator $Var[b|X]=\sigma^2(XX')^{-1}$.
+The standard errors of the variances of the coefficients are calculated by taking the diagonal terms of $\hat{\Sigma}_A$ (which are the variances) and taking the square root. 
+\textbf{Note that all of these values can also be estimated equation by equation of the system}. The problem is only that you dont get the whole $U_t$ matrix that is needed for further analysis. 
+To get the impulse responses, we rely on the \textbf{moving average representation (MA)}, to which we can arrive using lag operators $L$:
+\begin{equation}
+\begin{aligned}
+y_t - (A_1 y_{t-1}+A_2 y_{t-2}+...+A_p y_{t-p})&=\nu + u_t \nonumber \\
+(I_K-A_1 L- A_2L^2-...-A_pL^p)y_t&=\nu + u_t \\
+A(L)y_t&=\nu+u_t \\
+y_t&=A(L)^{-1}(\nu+u_t)\\
+y_t&=\Phi(L)(\nu+u_t)\\
+y_t&=\left(\sum_{i=0}^\infty\Phi_j\right)\nu+\sum_{i=0}^\infty\Phi_ju_{t-i}
+\end{aligned}
+\end{equation}
+where $\Phi (L)$ is an operator that reflects the assumption that $A(L)^{-1}$ is equal to an infinite sum, where the common ratio is
+$A_1 L+A_2L^2+...+A_pL^p$ and we know that the first term in the sum is $\Phi_0=I_K$. To find the other terms of this infinite sum, we use the fact that
+$A(L)\Phi(L)=I_K$, or written differently:
+\begin{equation}
+\begin{aligned}
+(I_K-A_1 L- A_2L^2-...-A_pL^p)(\Phi_0+\Phi_1L+\Phi_2L^2+...)=I_K \nonumber
+\end{aligned}
+\end{equation} 
+We can see that since $\Phi_0$ stands as the sole term, it is equal to $I_K$, while the other terms needs to be zero to match the right-hand side.
+After some multiplication, we get:
+\begin{equation}
+\begin{aligned}
+\Phi_0+\Phi_1L-\Phi_0A_1L+\Phi_2 L^2-\Phi_1 A_1 L^2-A_2 L^2\Phi_0+...=I_K \nonumber \\
+\Phi_0+(\Phi_1-\Phi_0A_1)L+(\Phi_2-\Phi_1 A_1-A_2\Phi_0)L^2...=I_K
+\end{aligned}
+\end{equation} 
+where the conditions are:
+\begin{equation}
+\begin{aligned}
+\Phi_0=I_K \nonumber \\
+\Phi_1=\Phi_0 A_1 \\
+\Phi_2=\Phi_1 A_1+\Phi_0A_2\\
+\vdots \\
+\Phi_i=\sum_{j=1}^i\Phi_{i-j}A_j
+\end{aligned}
+\end{equation}
+Looking at the MA representation, we can see that the elements of $\Phi(L)$ are already the impulse responses to a unit shock. Using the represantation without the constant $\nu$:
+\begin{equation}
+\begin{aligned}
+y_t=\sum_{i=0}^\infty\Phi_ju_{t-i}=\Phi_0 u_t+\Phi_1 u_{t-1}+\Phi_2 u_{t-2}+...\nonumber
+\end{aligned}
+\end{equation}
+where the response of variable $i$ in $y_t$ after $s$ periods when variable $j$ is hit by a unit shock in $t$:
+\begin{equation}
+\begin{aligned}
+\frac{\partial y_{i,t+s}}{\partial u_{j,t}}=\Phi_s(i,j)=\phi_{ij,s} \nonumber
+\end{aligned}
+\end{equation}
+Note that these responses are transitory if $y_t\sim I(0)$. To get to the structural impulse responses, we can show that reduced form shocks $u_t$ can be mapped on to more primitive \textbf{structural shocks} $\varepsilon_t$. To show this, the reduced form VAR:
+\begin{equation}
+\begin{aligned}
+y_{t} &=A_1 y_{t-1}+A_2 y_{t-2}+...+A_p y_{t-p}+u_t \nonumber
+\end{aligned}
+\end{equation}
+can be rewritten as: 
+\begin{equation}
+\begin{aligned}
+y_{t} &=A_1 y_{t-1}+A_2 y_{t-2}+...+A_p y_{t-p}+\mathcal{A}^{-1}\mathcal{B}\varepsilon_t \nonumber
+\end{aligned}
+\end{equation}
+or:
+\begin{equation}
+\begin{aligned}
+\mathcal{A}y_{t} &=A^*_1 y_{t-1}+A^*_2 y_{t-2}+...+A^*_p y_{t-p}+\mathcal{B}\varepsilon_t \nonumber
+\end{aligned}
+\end{equation}
+which is the \textbf{structural VAR} representation, where we used the fact that there might also be contemporaneous relationships between the variables governed by $\mathcal{A}$ matrix. Since we normally assume orthogonality of shocks, $\mathcal{B}$ is an identity matrix by assumption. 
+We have a mapping between the two types of shocks:
+\begin{equation}
+\begin{aligned}
+u_t=\mathcal{A}^{-1}\mathcal{B}\varepsilon_t\nonumber
+\end{aligned}
+\end{equation}
+where $u_t$ and $\varepsilon_t$ are $T\times N$ and the structural matrices are $N\times N$. Thus, structural shocks can be computed as:
+\begin{equation}
+\begin{aligned}
+\varepsilon_t=\mathcal{B}^{-1}\mathcal{A}u_t\nonumber
+\end{aligned}
+\end{equation}
+\begin{center}
+\textbf{2. Cholesky Decomposition/Triangularization}
+\end{center}
+The whole point of Cholesky decomposition is that the reduced form VAR estimates arise only from a statistical exercise - there are not baked in assumption with regard to the
+relationship between the variables in the system. Triangularization is a simple way to quantitatively represent a causal chain the system itself. While some variables affect others contemporaneously, the others only impact it with a lag. 
+A classic example is the trivariate VAR, where the interest rate is ordered last - it affect everything with a lag, but other variables do impact it through a policy function. The higher (more left) in the dataframe we go, the more rigid are the variables.  
+This assumption can be easily implemented using Cholesky decomposition.\\[12pt]
+To do this, we take the the residual variance covariance matrix $\hat{\Sigma}_u$ and do a Cholesky decomposition to get:
+\begin{equation}
+\begin{aligned}
+\hat{\Sigma}_u=PP'\nonumber
+\end{aligned}
+\end{equation}
+where $P$ is lower triangular. Since we also have the mapping between the reduced form and structural shocks, we know that:
+\begin{equation}
+\begin{aligned}
+Var(u_t)=\mathbb{E}(u_tu'_t)=\mathcal{A}^{-1}\mathcal{B}\mathbb{E}(\varepsilon_t\varepsilon'_t)\mathcal{B}'\mathcal{A}'^{-1} \nonumber
+\end{aligned}
+\end{equation}
+Assuming that a reduced form shock is only driven by one more primitive shock, $\mathcal{B}=I_K$, and we can thus rewrite the expression as:
+\begin{equation}
+\begin{aligned}
+Var(u_t)=\mathbb{E}(u_tu'_t)=\mathcal{A}^{-1}\mathbb{E}(\varepsilon_t\varepsilon'_t)\mathcal{A}'^{-1} 
+\end{aligned}
+\end{equation}
+where $\mathcal{A}^{-1}$ is actually equal to the Cholesky $P$ matrix. Note that we could also write the restrictions as $\mathcal{B}$ being a diagonal matrix, with non-zero diagonal terms, and $\mathcal{A}$ being a lower triangular matrix with non-zero diagonal elements. 
+This would yield the same mapping, but the seperate matrices would be a bit different. We can do this because the system is still identified. Note that:
+\begin{itemize}
+\item reduced form has $k+pk^2+\dfrac{k(k+1)}{2}$ parameters (constants, coefficients, unique values of $\Sigma_u$)
+\item structural form has $k+(p+2)k^2$ parameters
+\end{itemize}
+which gives us the difference of $k+(p+2)k^2-k-pk^2-\frac{k(k+1)}{2}=k^2+\frac{k(k-1)}{2}$, giving us the number of the additional restriction necessary to identify all the structural coefficients. In the accompanying Cholesky example, our $k=5$, meaning that we need $35$ additional restrictions.
+We get 20 with imposing zero restrictions on off-diagonal elements of $\mathcal{B}$ and 15 restrictions by imposing zero restrictions on the lower triangular elements of $\mathcal{A}$ and 1s on its diagonal. An equivalent representation is by making $\mathcal{B}=I_K$, and only have zero restrictions in $\mathcal{A}$ as already mentioned. 
+By performing the Cholesky decomposition, we in effect get $\mathcal{A}^{-1}\mathcal{B}$, because the matrix is exactly identified if it is lower triangular. Thus, we can get $\varepsilon_t$:
+\begin{equation}
+\begin{aligned}
+\varepsilon_t=P^{-1}u_t \nonumber
+\end{aligned}
+\end{equation}
+Note that $\mathcal{B}$ is actually a diagonal matrix where the diagonal terms are equal to the diagonal terms of $P$ (if $\mathcal{A}$ is assumed to have 1 on the diagonal).
+\begin{equation}
+\begin{aligned}
+Var(u_t)=PP'=P\mathcal{B}^{-1}\mathcal{B}\mathcal{B}'\mathcal{B}'^{-1}P' 
+\end{aligned}
+\end{equation}
+In essence, (1) and (2) are the same. But they do allow us to distinguish between unit and one standard deviation impulse responses. Writing the MA representation, we can see that:
+\begin{equation}
+\begin{aligned}
+y_t=\Phi(L)u_{t}&=\Phi(L)P\mathcal{B}^{-1}\varepsilon_t=\Phi(L)\mathcal{A}^{-1}\varepsilon_t\nonumber \\
+\frac{\partial y_{t+h-1}}{\partial \varepsilon_{t}}&=\Phi(L)\mathcal{A}^{-1} \nonumber
+\end{aligned}
+\end{equation}
+which corresponds to the the impulse responses to \textbf{a unit structural shock}. Whereas, the following:
+\begin{equation}
+\begin{aligned}
+y_t=\Phi(L)u_{t}&=\Phi(L)P\mathcal{B}^{-1}\varepsilon_t=\Phi(L)Pz_t\nonumber \\
+\frac{\partial y_{t+h-1}}{\partial z_{t}}&=\Phi_{h-1}P \nonumber
+\end{aligned}
+\end{equation}
+corresponds to the impulse responses to \textbf{a one standard deviation structural shocks}. This is because $\mathcal{B}^{-1}$ is multiplied with $\varepsilon_t$ to yield the standardized structural shock $\varepsilon_t$.
+We know that $\mathcal{B}$ is the standard deviation matrix of $\varepsilon_t$ because the product needs to overall lead back to the Cholesky representation $PP'$. This is only possible if $Var(\varepsilon_t)=\mathcal{B}\mathcal{B}'$. 
+In his book, Lütkepohl implies that $P$ can be decomposed into $W$ and $D$ matrices, where $W$ is equal to $P$, but with $1s$ on the diagonal. Furthermore, $D$ is a diagonal matrix with the elements of $P$. 
+This is exactly the same decomposition that is done by directly assuming an \textbf{AB model}. One could also assume an \textbf{A model} (with $\mathcal{B}=I_K$) and follow the same steps. 
+\begin{center}
+\textbf{2. VAR with Exogenous Instruments}
+\end{center}
+\begin{center}
+\textbf{2. Proxy-VAR}
+\end{center}
+
+
+\end{document} 
