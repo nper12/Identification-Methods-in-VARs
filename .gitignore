@@ -6,4 +6,5 @@
 *.log
 *.synctex.gz
 *.bbl
+*.tex
 .DS_Store
