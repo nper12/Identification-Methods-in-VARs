@@ -61,7 +61,7 @@ var.est1 <- vars::VAR(data, p = 3,type = "cons")
 
 # Setting up the SVAR with Cholesky decomposition
 a.mat <- diag(5)
-diag(a.mat) <- 1
+diag(a.mat) <- NA
 a.mat[2, 1] <- NA
 a.mat[3, 1] <- NA
 a.mat[3, 2] <- NA
@@ -86,9 +86,9 @@ svar.one$B
 
 # Compute and store IRFs
 par(mfrow = c(4, 1), mar = c(2.2, 2.2, 1, 1), cex = 0.6)
-irf_y <- irf(svar.one, response = "p", impulse = "carbon", 
-             n.ahead = 36, ortho = TRUE, boot = TRUE)
 irf_y <- irf(svar.one, response = "y", impulse = "carbon", 
+             n.ahead = 36, ortho = TRUE, boot = TRUE)
+irf_p <- irf(svar.one, response = "p", impulse = "carbon", 
              n.ahead = 36, ortho = TRUE, boot = TRUE)
 irf_i <- irf(svar.one, response = "i", impulse = "carbon", 
              n.ahead = 36, ortho = TRUE, boot = TRUE)
@@ -98,7 +98,7 @@ irf_carbon <- irf(svar.one, response = "carbon", impulse = "carbon",
                   n.ahead = 36, ortho = TRUE, boot = TRUE)
 
 plot(irf_y)
-plot(irf_y)
+plot(irf_p)
 plot(irf_i)
 plot(irf_u)
 plot(irf_carbon)
@@ -218,8 +218,7 @@ monetary_plot <- autoplot(monetary_shock, color="blue") + theme_bw()+ theme(pane
 shock_plot <- carbon_plot + monetary_plot
 shock_plot
 plot(shock_plot)
-ggsave("Output/shock_plot.pdf", plot = shock_plot, width = 10, height = 3, dpi = 600)
-getwd()
+ggsave("../Output/shock_plot.pdf", plot = shock_plot, width = 10, height = 3, dpi = 600)
 #-------------------------- IRFs ročno -------------------------------
 irf <- Phi(var.est1,nstep=39)
 nstep <- abs(as.integer(39)) 
@@ -257,7 +256,7 @@ nstep <- abs(as.integer(39))
 #----------------------------- Structural impulse responses z
 rownames(irf) <- c("carbon", "p", "u", "y", "i")
 for(i in 1: dim(irf)[3]){
-  irf[, , i] <- irf[, , i] %*%  P%*%solve(D) #this is how you get one unit shock impulse responses! - one unit shock to y!!! in our case carbon shock
+  irf[, , i] <- irf[, , i] %*% P #this is how you get one unit shock impulse responses! - one unit shock to y!!! in our case carbon shock
 }
 irf_carbon = array(0, dim=c(5,40))
 for(i in 1:dim(irf)[3]){
@@ -268,12 +267,8 @@ for (i in 1:nrow(irf_carbon)) {  # Corrected syntax
   plot(irf_carbon[i, ], type = "o", col = "blue", main = paste("Plot for Row", i), xlab = "Index", ylab = "Value")
 }
 irf
-structural_shock <- array(NA, dim=c(240,1))
-structural_shock[4:240,] <- structural_shocks[1,]
-structural_shock <- as.data.frame(structural_shock)
-structural_shock <- as.data.frame(structural_carbon)
 irf_carbon <- as.data.frame(irf_carbon)
-rownames(irf_carbon) <- c("Carbon", "Output", "Unemployment", "Inflation", "Interest rate")
+rownames(irf_carbon) <- c("Carbon", "Inflation", "Unemployment", "Output", "Interest rate")
 colnames(irf_carbon) <- 1:40
 irf_carbon <- t(irf_carbon)
 irf_carbon <- as.data.frame(irf_carbon)
@@ -291,7 +286,6 @@ plot <- ggplot(Response_carbon, aes(x = Period, y = Response_carbon)) +
     panel.grid=element_blank()
   )
 plot
-boot()
 irf
 ```
 

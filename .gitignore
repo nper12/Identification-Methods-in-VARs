@@ -8,3 +8,4 @@
 *.bbl
 *.tex
 .DS_Store
+.Rproj.user
