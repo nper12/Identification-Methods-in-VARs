@@ -1,4 +1,3 @@
-setwd("/Users/nejcperme/Desktop/Faks/Podiplomski - 2.letnik/Monetary Economics 2/SVAR")
 library(readxl)
 library(tseries)
 #library(quantmod)
@@ -16,8 +15,8 @@ library(reshape2)
 #load data
 # Original time series are from the Journal of Applied Econometrics (JAE) data archive 
 #(see data from Weber, C.E. (1995). Cyclical Output, cyclical unemployment, and Okun's coefficient: A new approach, Journal of Applied Econometrics, Vol. 10, pp. 433-335.).
-
-Blanchard_Quah <- read_excel("../Data/Long_Run.xlsx")
+getwd()
+Blanchard_Quah <- read_excel("Data/Long_Run.xlsx")
 dat <- Blanchard_Quah
 
 #Transform data
