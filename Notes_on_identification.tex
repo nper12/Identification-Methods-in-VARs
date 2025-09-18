@@ -206,31 +206,83 @@ By performing the Cholesky decomposition, we in effect get $\mathcal{A}^{-1}\mat
 Note that $\mathcal{B}$ is actually a diagonal matrix where the diagonal terms are equal to the diagonal terms of $P$ (if $\mathcal{A}$ is assumed to have 1 on the diagonal).
 \begin{equation}
 \begin{aligned}
-Var(u_t)=PP'=P\mathcal{B}^{-1}\mathcal{B}\mathcal{B}'\mathcal{B}'^{-1}P' 
+\hat{\Sigma}_u=PP'=P\mathcal{B}^{-1}\mathcal{B}\mathcal{B}'\mathcal{B}'^{-1}P' 
 \end{aligned}
 \end{equation}
-In essence, (1) and (2) are the same. But they do allow us to distinguish between unit and one standard deviation impulse responses. Writing the MA representation, we can see that:
+In essence, (1) and (2) are the same - one is theoretical and one empirical, where $\mathbb{E}(\varepsilon_t\varepsilon'_t)=\mathcal{B}\mathcal{B}'$. What's more, they allow us to distinguish between unit and one standard deviation impulse responses. Writing the MA representation, we can see that:
 \begin{equation}
 \begin{aligned}
 y_t=\Phi(L)u_{t}&=\Phi(L)P\mathcal{B}^{-1}\varepsilon_t=\Phi(L)\mathcal{A}^{-1}\varepsilon_t\nonumber \\
 \frac{\partial y_{t+h-1}}{\partial \varepsilon_{t}}&=\Phi(L)\mathcal{A}^{-1} \nonumber
 \end{aligned}
 \end{equation}
-which corresponds to the the impulse responses to \textbf{a unit structural shock}. Whereas, the following:
+which corresponds to the the impulse responses to \textbf{a unit structural shock}, which has $\mathbb{E}(\varepsilon_t\varepsilon'_t)=\mathcal{B}\mathcal{B}'$. Whereas, the following:
 \begin{equation}
 \begin{aligned}
 y_t=\Phi(L)u_{t}&=\Phi(L)P\mathcal{B}^{-1}\varepsilon_t=\Phi(L)Pz_t\nonumber \\
 \frac{\partial y_{t+h-1}}{\partial z_{t}}&=\Phi_{h-1}P \nonumber
 \end{aligned}
 \end{equation}
-corresponds to the impulse responses to \textbf{a one standard deviation structural shocks}. This is because $\mathcal{B}^{-1}$ is multiplied with $\varepsilon_t$ to yield the standardized structural shock $\varepsilon_t$.
+corresponds to the impulse responses to \textbf{a one standard deviation structural shocks}. This is because $\mathcal{B}^{-1}$ is multiplied with $\varepsilon_t$ to yield the standardized structural shock $z_t$, which has $\mathbb{E}(z_tz'_t)=I_{K}$.
 We know that $\mathcal{B}$ is the standard deviation matrix of $\varepsilon_t$ because the product needs to overall lead back to the Cholesky representation $PP'$. This is only possible if $Var(\varepsilon_t)=\mathcal{B}\mathcal{B}'$. 
 In his book, Lütkepohl implies that $P$ can be decomposed into $W$ and $D$ matrices, where $W$ is equal to $P$, but with $1s$ on the diagonal. Furthermore, $D$ is a diagonal matrix with the elements of $P$. 
 This is exactly the same decomposition that is done by directly assuming an \textbf{AB model}. One could also assume an \textbf{A model} (with $\mathcal{B}=I_K$) and follow the same steps. 
 \begin{center}
-\textbf{2. VAR with Exogenous Instruments}
+\textbf{2. Long Run Restrictions (alla Blanchard Quah)}
 \end{center}
+
+\noindent The motivation is that economic theory sometimes gives us little guidance about what will happen in the short run. But we know from the standpoint of nominal rigidities for example, that not output, but only prices should be impacted by aggregate demand shocks in the long run (the so-called \textbf{neutrality of money}). 
+Empirically, this assumption can be incorporated in the structural VAR framework by applying restrictions to the long run impulse response matrix. Going back to our Wold representation: 
+\begin{equation}
+\begin{aligned}
+y_t=A(L)^{-1}u_t = \Phi(L)u_t=\Phi(L)\mathcal{A}^{-1}\mathcal{B}\varepsilon_{t}\nonumber
+\end{aligned}
+\end{equation}
+as already shown before. We are interested in calculating $\Phi(1)\mathcal{A}^{-1}\mathcal{B}$, where $\Phi(1)$ is the infinite sum of all MA coefficients. We know that we can get this easily by calculating $A(1)^{-1}$. But in this case, we do not use Cholesky decomposition on $\hat{\Sigma}_u$. This would correspond to short-run zero restrictions. We wish to use it on the long-run response matrix. 
+This is why we do not know what is $\mathcal{C}$:
+\begin{equation}
+\begin{aligned}
+\mathcal{C}=A(1)^{-1}\mathcal{A}^{-1}\mathcal{B}\nonumber
+\end{aligned}
+\end{equation}
+However, note that we can calculate:
+\begin{equation}
+\begin{aligned}
+\mathcal{C} \mathcal{C}'= A(1)^{-1} \mathcal{A}^{-1} \mathcal{B} \mathcal{B}' (\mathcal{A}^{-1})' (A(1)^{-1})' \nonumber 
+\end{aligned}
+\end{equation}
+where the inner product is known:
+\begin{equation}
+\begin{aligned}
+\mathcal{C} \mathcal{C}'= A(1)^{-1} \Sigma_u (A(1)^{-1})' \nonumber 
+\end{aligned}
+\end{equation}
+Thus we can calculate $\mathcal{C}$, because every terms is observable and we can also get the short-run structural matrix $\mathcal{A}^{-1}\mathcal{B}$. We calculate $\mathcal{C}$ by using the Cholesky matrix, which assumes zero restrictions. For example:
+\[
+\begin{bmatrix}
+y_{t,t+\infty} \\
+u_{t,t+\infty}
+\end{bmatrix}
+=
+\begin{bmatrix}
+c_{11} & 0 \\
+c_{21} & c_{22}
+\end{bmatrix}
+\begin{bmatrix}
+\varepsilon^{\text{Supply}}_t \\
+\varepsilon^{\text{Demand}}_t
+\end{bmatrix}
+\]
+meaning that the supply shock has a long run effect on output ($c_{11}$) as well as unemployment ($c_{21}$), whereas the non-technological shock only has a long run effect on unemployment ($c_{22}$).
+We can then get the short run structural matrix as:
+\begin{equation}
+\begin{aligned}
+A(1)^{-1}\mathcal{C}=\mathcal{A}^{-1}\mathcal{B}\nonumber
+\end{aligned}
+\end{equation}
+where $\mathcal{B}$ is still assumed to be diagonal or identity as before. Thus, we can calculate the whole sequence of responses.
 \begin{center}
+where the 
 \textbf{2. Proxy-VAR}
 \end{center}
 
