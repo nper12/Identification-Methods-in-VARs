@@ -9,3 +9,6 @@
 *.tex
 .DS_Store
 .Rproj.user
+combined_plot.pdf
+*.pdf
+*.csv
