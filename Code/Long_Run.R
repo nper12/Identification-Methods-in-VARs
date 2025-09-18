@@ -16,7 +16,7 @@ library(reshape2)
 #load data
 # Original time series are from the Journal of Applied Econometrics (JAE) data archive 
 #(see data from Weber, C.E. (1995). Cyclical Output, cyclical unemployment, and Okun's coefficient: A new approach, Journal of Applied Econometrics, Vol. 10, pp. 433-335.).
-Blanchard_Quah <- read_excel("Blanchard-Quah.xlsx")
+Blanchard_Quah <- read_excel("../Data/Long_Run.xlsx")
 dat <- Blanchard_Quah
 
 #Transform data

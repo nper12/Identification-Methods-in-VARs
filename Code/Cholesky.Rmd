@@ -34,8 +34,8 @@ library(svars)
 We first load the data and the transform it to turn it into a time-series object. We then create a "data" dataframe.
 
 ```{r dataframe, include=FALSE}
-
-data <- read_excel("/Users/nejcperme/Desktop/Faks/Podiplomski - 2.letnik/Monetary Economics 2/SVAR/Empirical_exam.xlsx")
+getwd()
+data <- read_excel("../Data/Cholesky.xlsx")
 
 #Transform data
 y <- ts(log(data$y)*100, start = c(2000, 1), freq = 12)  # output
