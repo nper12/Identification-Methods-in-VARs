@@ -7,8 +7,8 @@ library(readxl)
 library(xlsx)
 library(extraDistr)
 library(lpirfs)
+GKdata <- read_excel("Data/GKdata.xlsx")
 #------------------------------ Data Wrangling ---------------------------------
-GKdata <- read_excel("/Users/nejcperme/Desktop/GKdata.xlsx")
 var <- VAR(GKdata[, c("logip", "logcpi", "gs1", "ebp")], p = 12, type = "const") #creates a VAR with 12 lags involving a constant
 res <- data.frame(stats::residuals(var)) #retains the residual matrix
 p <- var$p #gets out the number of lags in VAR
@@ -20,7 +20,7 @@ if ("gs1" %in% seriesnames) { #reorder the list so that the dependent variable i
   seriesnames <- c("gs1", seriesnames) # Order the dependent variable first
 } else {
   stop(paste("The series you are trying to instrument (", dependent, ") is not a series in the residual dataframe.", sep =""))
-}
+} #this gives you the original order in the var-cov - i dont know why seriesnames is not ordered okays
 res[, "ff4_tc"] <- GKdata$ff4_tc[(p+1):length(GKdata$ff4_tc)] #you have to trim the column of first 12 observations, because of the VAR structure
 # put together matrix of residuals
 u <- as.matrix(res[, seriesnames])
@@ -55,9 +55,11 @@ s12s12 <- t(gamma_21 - s21_on_s11 * gamma_11) %*% solve(Q) %*% (gamma_21 - s21_o
 s11_squared <- gamma_11 - s12s12 #če ne bi mel s11 bi pomenil, da so to normalizirani koeficienti (če je s11 = 1)!
 sp <- as.numeric(sqrt(s11_squared)) #s11
 shockcolumn <- sp * coefs[origorder] #S21
+shockcolumn
 #---------------------------------IRFs-------------------------------------------
 ma_representation <- Phi(var, 50)
 ma_representation
+Acoef(var)
 irfs <- apply(ma_representation, 3, function(x) x %*% shockcolumn) #takes the MA coefficients and multiplies shockcol with each of the matrices. 
 #The 3 is there because ma_representation is a three-dimensional array, this means that we have stacked matrices in an object.
 irfs <- as.data.frame(t(irfs))
@@ -67,6 +69,146 @@ irfs <- mutate(irfs, horizon = 0:50) #adds horizon variable to irfs dataframe
 irfs <- gather(irfs, key = variable, value = response, -horizon) #reshapse the dataframe, we get a long format, where
 #horizon stays the same, a new column variable hold the names of variable in original dataframe and values are the ones that pertained to the each variable.
 ggplot(irfs, aes(x = horizon, y = response, group = variable, color = variable)) + geom_line()
+
+
+#--------------------------------- proving equivalence VARX ---------------------------
+data_varx <- na.omit(GKdata)
+data_varx <- data_varx[,-1]
+
+#--------------------------creating the dataframes for OLS estimation
+lagged_data <- data_varx %>%
+  mutate(across(!ff4_tc,
+                .fns = setNames(
+                  lapply(1:12, function(k) ~lag(.x, k)),
+                  paste0("lag", 1:12)
+                ),
+                .names = "{.col}_{fn}"))
+
+# Add constant
+lagged_data$cons <- 1 
+
+# Drop NA rows (due to lags)
+clean_frame <- na.omit(lagged_data)
+
+# Dependent variables (endogenous system: 4 vars)
+Y <- as.matrix(clean_frame[, c("logcpi", "logip", "gs1", "ebp")])
+
+# Regressors: all lagged terms + exogenous ff4_tc contemporaneous + constant
+regressors <- grep("_lag", names(clean_frame), value = TRUE)
+X <- as.matrix(clean_frame[, c(regressors, "ff4_tc", "cons")])
+
+# Transpose for later use
+Y <- t(Y)
+X <- t(X)
+
+#---------------------------------------- OLS estimation
+B_hat <- Y%*%t(X)%*%solve(X%*%t(X)) #OLS matrix YX'(XX')^-1
+
+# number of endogenous variables
+endog_vars <- c("logcpi", "logip", "gs1", "ebp")
+p <- 12   # number of lags
+
+# List to store A matrices
+A_mats <- vector("list", p)
+
+for (lag in 1:p) {
+  # Build exact column names for this lag
+  cols <- paste0(endog_vars, "_lag", lag)
+  
+  # Find which column positions exist in B_hat
+  col_pos <- match(cols, colnames(B_hat))
+  
+  # Extract the columns from B_hat
+  A_mats[[lag]] <- B_hat[, col_pos, drop = FALSE]
+  
+  # Assign row and column names
+  rownames(A_mats[[lag]]) <- endog_vars
+  colnames(A_mats[[lag]]) <- cols
+}
+
+# Exogenous contemporaneous matrix
+B_mat <- B_hat[, "ff4_tc", drop = FALSE]
+rownames(B_mat) <- endog_vars
+colnames(B_mat) <- "ff4_tc"
+
+# Constant vector
+c_vec <- B_hat[, "cons", drop = FALSE]
+rownames(c_vec) <- endog_vars
+colnames(c_vec) <- "cons"
+
+A_mats
+B_mat
+
+#-------------------------------------- IRF
+nstep <- abs(as.integer(50)) 
+K <- 4 #določi koliko maš y
+p <- 12 #določi koliko je endogenih lagov
+if(nstep >= p){
+  As <- array(0, dim = c(K, K, nstep + 1))
+  for(i in (p + 1):(nstep + 1)){ #create nstep matrices filled with zeros
+    As[, , i] <- matrix(0, nrow = K, ncol = K)
+  }
+} else {
+  As <- array(0, dim = c(K, K, p))
+}
+for(i in 1:p){
+  As[, , i] <- A_mats[[i]] #fill the first p matrices with actual coefficients
+}  
+Phi <- array(0, dim=c(K, K, nstep + 1))
+Phi[, ,1] <- diag(K)
+Phi[, , 2] <- Phi[, , 1] %*% As[, , 1]
+if (nstep > 1) {
+  for (i in 3:(nstep + 1)) {
+    tmp1 <- Phi[, , 1] %*% As[, , i-1]
+    tmp2 <- matrix(0, nrow = K, ncol = K)
+    idx <- (i - 2):1
+    for (j in 1:(i - 2)) {
+      tmp2 <- tmp2 + Phi[, , j+1] %*% As[, , idx[j]]
+    }
+    Phi[, , i] <- tmp1 + tmp2
+  }
+}
+Phi #equivalence
+#-------------------------------------------------- structural impulse responses
+rownames(Phi) <- c("logcpi", "logip", "gs1", "ebp")
+for(i in 1: dim(Phi)[3]){
+  Phi[, , i] <- Phi[, , i] %*% B_mat %*% (1/B_mat["gs1",]) * sp #this is how you get the partially identified structural coefficients from proxy VAR in a VARX framework! - gs1 response is normalized to 1!
+}
+irf_monetary = array(0, dim=c(4,51))
+for(i in 1:dim(Phi)[3]){
+  irf_monetary[,i] <- Phi[1:4,1,i]
+}
+# Loop through each row and plot
+for (i in 1:nrow(irf_monetary)) {  # Corrected syntax
+  plot(irf_monetary[i, ], type = "o", col = "blue", main = paste("Plot for Row", i), xlab = "Index", ylab = "Value")
+}
+irf
+irf_monetary <- as.data.frame(t(irf_monetary))  # already done in your code
+colnames(irf_monetary) <- c("Inflation", "Output", "Yield", "Premium")
+irf_monetary$Period <- 1:nrow(irf_monetary)
+
+# Convert to long format for faceting
+irf_long <- irf_monetary %>%
+  pivot_longer(
+    cols = c("Inflation", "Output", "Yield", "Premium"),
+    names_to = "Variable",
+    values_to = "Response"
+  )
+
+# Faceted plot
+ggplot(irf_long, aes(x = Period, y = Response)) +
+  geom_line(color = "blue") +
+  facet_wrap(~ Variable, scales = "free_y", ncol = 1) +
+  theme_bw() +
+  labs(title = "Impulse Responses to Monetary Shock",
+       x = "Period", y = "") +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10, color="black"),
+    panel.grid = element_blank(),
+    strip.text = element_text(size = 12, face = "bold")
+  )
 #----------------------------- structural shocks ------------------------------
 res <- res[,1:4]
 head(res)
@@ -287,3 +429,83 @@ ggplot(long_data, aes(x = horizon)) +
   theme(legend.position = "bottom")
 
 
+
+#-------------------------- robustness check -------------------
+data_varx <- na.omit(GKdata)
+data_varx <- data_varx[,-c(1,6)]
+var
+var <- VAR(data_varx, p = 12, type = "const") #creates a VAR with 12 lags involving a constant
+res <- data.frame(stats::residuals(var)) #retains the residual matrix
+p <- var$p #gets out the number of lags in VAR
+seriesnames <- colnames(res) #get the names of the variables form the residual matrix
+origorder <- seriesnames
+if ("gs1" %in% seriesnames) { #reorder the list so that the dependent variable is first
+  # order dependent first
+  seriesnames <- seriesnames[seriesnames != "gs1"]
+  seriesnames <- c("gs1", seriesnames) # Order the dependent variable first
+} else {
+  stop(paste("The series you are trying to instrument (", dependent, ") is not a series in the residual dataframe.", sep =""))
+} #this gives you the original order in the var-cov - i dont know why seriesnames is not ordered okays
+# Remove NA values from ff4_tc
+ff4_tc_clean <- na.omit(GKdata$ff4_tc)
+# Trim the first p observations to align with residuals
+ff4_tc_clean <- ff4_tc_clean[(p+1):length(ff4_tc_clean)]
+
+# Trim the first p observations for ff4_tc
+res$ff4_tc <- ff4_tc_clean
+# put together matrix of residuals
+u <- as.matrix(res[, seriesnames])
+# Now restrict to just the sample for the instrument (if necessary)
+validrows <- !is.na(res[, "ff4_tc"])
+u <- u[validrows,]
+# Useful constants
+T <- nrow(u)
+k <- ncol(u)
+# Some necessary parts of the covariance matrix
+gamma <- (1 / (T - k*p - 1)) * t(u) %*% u
+gamma_11 <- gamma[1,1]
+gamma_21 <- matrix(gamma[2:nrow(gamma), 1], c(k-1,1))
+gamma_22 <- matrix(gamma[2:nrow(gamma), 2:nrow(gamma)], c(k-1,k-1))
+#---------------------------------First stage IV--------------------------------------------
+firststage <- lm(res$gs1 ~ ff4_tc, res)
+res[names(predict(firststage)), "fs"] <- stats::predict(firststage)
+coefs <- rep(0, k) #k=4 in case of GK
+names(coefs) <- seriesnames #the list is named
+for (i in 1:k) {
+  s <- seriesnames[i]
+  if (s != "gs1") {
+    secondstage <- stats::lm(stats::as.formula(paste(s, " ~ fs", sep = "")), res)
+    coefs[i] <- secondstage$coefficients["fs"]
+  } else {
+    coefs[i] <- 1
+  }
+} #coef are S21/s11
+coefs
+s21_on_s11 <- matrix(coefs[2:k], c(k-1,1)) #3x1 matrix of coefficient (ratios)
+Q <- (s21_on_s11 * gamma_11) %*% t(s21_on_s11) - (gamma_21 %*% t(s21_on_s11) + s21_on_s11 %*% t(gamma_21)) + gamma_22
+s12s12 <- t(gamma_21 - s21_on_s11 * gamma_11) %*% solve(Q) %*% (gamma_21 - s21_on_s11 * gamma_11)
+s11_squared <- gamma_11 - s12s12 #če ne bi mel s11 bi pomenil, da so to normalizirani koeficienti (če je s11 = 1)!
+sp <- as.numeric(sqrt(s11_squared)) #s11 - note that this can be interpreted as standard deviation of the strucutral shock!!!!!
+coefs <- coefs[origorder]
+shockcolumn <- sp * coefs[origorder] #S21
+shockcolumn
+#---------------------------------IRFs-------------------------------------------
+ma_representation <- Phi(var, 50)
+ma_representation
+irfs <- apply(ma_representation, 3, function(x) x %*% shockcolumn) #takes the MA coefficients and multiplies shockcol with each of the matrices. 
+#The 3 is there because ma_representation is a three-dimensional array, this means that we have stacked matrices in an object.
+irfs <- as.data.frame(t(irfs))
+irfs#makes a dataframe from a matrix and transposes the matrix for 51 horizons
+colnames(irfs) <- names(shockcolumn) #adds names to irfs
+irfs <- mutate(irfs, horizon = 0:50) #adds horizon variable to irfs dataframe
+irfs <- gather(irfs, key = variable, value = response, -horizon) #reshapse the dataframe, we get a long format, where
+#horizon stays the same, a new column variable hold the names of variable in original dataframe and values are the ones that pertained to the each variable.
+ggplot(irfs, aes(x = horizon, y = response, group = variable, color = variable)) + geom_line()
+
+
+
+
+#Note that VARX does not allow you to identify absolute responses to underlying true structural shocks, only relative. These are the same as in the case of Proxy-VAR. 
+#What you get when estimating the B matrix you get the raw structural coefficients that relate to how proxy impacts the dependent variables. You say unit shock in the proxy or one standard deviation of the proxy.
+#If you normalize the policy rate to rise by 100bps you actually get the true monetary policy shock, but conditional on the set response in the rate!!!! 
+#Absolute responses of variable to a structural underlying shock (not proxy) are only possible to get in a proxy VAR setting cause you have the explicit mapping!!!
