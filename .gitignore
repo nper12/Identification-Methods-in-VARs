@@ -2,11 +2,6 @@
 *.Rhistory
 *.RData
 *.Ruserdata
-*.aux
-*.log
-*.synctex.gz
-*.bbl
-*.tex
 .DS_Store
 .Rproj.user
 combined_plot.pdf
