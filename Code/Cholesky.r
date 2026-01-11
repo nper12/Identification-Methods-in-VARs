@@ -20,6 +20,7 @@ library(svars)
 
 data <- read_excel("Data/Cholesky.xlsx")
 
+#---------------- Data wrangling and VAR estimation with package -------------
 #Transform data
 y <- ts(log(data$y)*100, start = c(2000, 1), freq = 12)  # output
 p <- ts(log(data$hcpi)*100, start = c(2000, 1), freq = 12)  # consumer inflation
@@ -36,6 +37,7 @@ plot.ts(data)
 #VAR estimation
 var.est1 <- vars::VAR(data, p = 3,type = "cons")
 
+#---------------------- Computing SVAR with a package --------------------------
 # Setting up the SVAR with Cholesky decomposition
 a.mat <- diag(5)
 diag(a.mat) <- NA
@@ -168,13 +170,11 @@ solve(standardized_matrix) #v tem primeru sta enaka A in B!
 svar.one$A
 structural_matrix <- solve(svar.one$A)%*%svar.one$B
 structural_matrix
-#----------------------- STRUCTURAL SHOCKS ---------------------------
+#----------------------- Structural shocks ---------------------------
 structural_shocks <- solve(structural_matrix)%*%t(residuals_var)
 #oziroma
 structural_shocks <- solve(P)%*%t(residuals_var)
 structural_shocks <- as.data.frame(t(structural_shocks))
-plot(structural_shocks$carbon)
-plot(structural_shocks$i)
 carbon_shock <- ts(structural_shocks$carbon, start=c(2000,3), frequency=12)
 monetary_shock <- ts(structural_shocks$i, start=c(2000,3), frequency=12)
 plot(carbon_shock)
@@ -185,10 +185,9 @@ monetary_plot <- autoplot(monetary_shock, color="blue") + theme_bw()+ theme(pane
                                                                             axis.text = element_text(color = "black", size =13),   plot.title = element_text(hjust = 0.5, size = 15),
                                                                             axis.title.x = element_text(size = 15),   panel.border = element_rect(color = "black", linewidth = 1)) + ggtitle("Monetary policy shock")+ ylab("")+ xlab("Year")
 shock_plot <- carbon_plot + monetary_plot
-shock_plot
 plot(shock_plot)
 ggsave("Output/shock_plot.pdf", plot = shock_plot, width = 10, height = 3, dpi = 600)
-#-------------------------- IRFs ročno -------------------------------
+#-------------------------- Phi coefficients using recursive formula -------------------------------
 irf <- Phi(var.est1,nstep=39)
 nstep <- abs(as.integer(39)) 
 K <- 5 #določi koliko maš y
@@ -219,11 +218,33 @@ if (nstep > 1) {
     Phi[, , i] <- tmp1 + tmp2
   }
 }
-return(Phi)
-}
 Phi #equivalence
 irf #equivalence
-#----------------------------- Structural impulse responses z
+
+#------------------ Phi coefficients using companion matrix ---------------
+# Suppose you already have A1,...,Ap stored in A (a list of p matrices)
+K <- nrow(A[[1]])
+p <- length(A)
+
+# Build the companion matrix
+compA <- matrix(0, nrow = K*p, ncol = K*p)
+compA[1:K, ] <- do.call(cbind, A)  # put A1,...,Ap in the first row block
+if (p > 1) {
+  compA[(K+1):(K*p), 1:(K*(p-1))] <- diag(K*(p-1))
+}
+
+# Compute Phi up to nstep
+nstep <- 39
+Phi <- array(0, dim = c(K, K, nstep+1))
+Phi[, , 1] <- diag(K)
+
+compA_power <- diag(K*p)   # start with A^0 = I
+for (h in 1:nstep) {
+  compA_power <- compA_power %*% compA   # multiply once more
+  Phi[, , h+1] <- compA_power[1:K, 1:K]  # extract top-left KxK block
+}
+Phi
+#----------------------------- Structural impulse responses  -------------
 rownames(irf) <- c("carbon", "p", "u", "y", "i")
 for(i in 1: dim(irf)[3]){
   irf[, , i] <- irf[, , i] %*% P #this is how you get one unit shock impulse responses! - one unit shock to y!!! in our case carbon shock
