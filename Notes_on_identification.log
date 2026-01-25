@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.9.5)  11 JAN 2026 16:16
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022) (preloaded format=pdflatex 2022.9.5)  25 JAN 2026 11:22
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -744,64 +744,4 @@ l.298 \begin{equation}
 pdfTeX warning (ext4): destination with the same identifier (name{equation.0.3}) has been already used, duplicate ignored
 <to be read again> 
                    \relax 
-l.298 \begin{equation}
-                      
-pdfTeX warning (ext4): destination with the same identifier (name{equation.0.3}) has been already used, duplicate ignored
-<to be read again> 
-                   \relax 
-l.304 \begin{equation}
-                      
-pdfTeX warning (ext4): destination with the same identifier (name{equation.0.3}) has been already used, duplicate ignored
-<to be read again> 
-                   \relax 
-l.304 \begin{equation}
-                      
-pdfTeX warning (ext4): destination with the same identifier (name{equation.0.3}) has been already used, duplicate ignored
-<to be read again> 
-                   \relax 
-l.304 \begin{equation}
-                      
-pdfTeX warning (ext4): destination with the same identifier (name{equation.0.3}) has been already used, duplicate ignored
-<to be read again> 
-                   \relax 
-l.304 \begin{equation}
-                      
-pdfTeX warning (ext4): destination with the same identifier (name{equation.0.3}) has been already used, duplicate ignored
-<to be read again> 
-                   \relax 
-l.327 \begin{equation}
-                      
-pdfTeX warning (ext4): destination with the same identifier (name{equation.0.3}) has been already used, duplicate ignored
-<to be read again> 
-                   \relax 
-l.327 \begin{equation}
-                      
-pdfTeX warning (ext4): destination with the same identifier (name{equation.0.3}) has been already used, duplicate ignored
-<to be read again> 
-                   \relax 
-l.327 \begin{equation}
-                      
-pdfTeX warning (ext4): destination with the same identifier (name{equation.0.3}) has been already used, duplicate ignored
-<to be read again> 
-                   \relax 
-l.327 \begin{equation}
-                       [6] [7] [8] [9] [10] [11] (./Notes_on_identification.aux)
-Package rerunfilecheck Info: File `Notes_on_identification.out' has not changed.
-(rerunfilecheck)             Checksum: E10E6EAF10F0D804322BD388CF27C954;739.
- ) 
-Here is how much of TeX's memory you used:
- 10868 strings out of 475075
- 171842 string characters out of 5779004
- 534298 words of memory out of 5000000
- 32116 multiletter control sequences out of 15000+600000
- 475500 words of font info for 51 fonts, out of 8000000 for 9000
- 1141 hyphenation exceptions out of 8191
- 72i,14n,77p,597b,529s stack positions out of 10000i,1000n,20000p,200000b,200000s
-{/usr/local/texlive/2022/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc}</usr/local/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/cm/cmti12.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/local/texlive/2022/texmf-dist/fonts/type1/public/cm-super/sfrm1200.pfb>
-Output written on Notes_on_identification.pdf (11 pages, 182137 bytes).
-PDF statistics:
- 151 PDF objects out of 1000 (max. 8388607)
- 108 compressed objects within 2 object streams
- 19 named destinations out of 1000 (max. 500000)
- 25 words of extra memory for PDF output out of 10000 (max. 10000000)
-
+l.298 \begi

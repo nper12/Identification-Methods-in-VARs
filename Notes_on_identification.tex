@@ -122,7 +122,7 @@ where the conditions are:
 \Phi_h=\sum_{j=1}^i\Phi_{h-j}A_j
 \end{aligned}
 \end{equation}
-In this way, the Phi coefficients or the reduced-form impulse responses can be calculated. Another way to do this is to construct the companion matrix:
+In this way, the Phi coefficients or the reduced-form impulse responses can be calculated. Another way to do this is to construct the companion matrix (omitting the constant!):
 \[
 Y_t = \mathcal{Z} Y_{t-1} + U_t,
 \]
@@ -333,7 +333,7 @@ where $\mathcal{B}$ is still assumed to be diagonal or identity as before. Thus,
 \begin{center}
 \textbf{3. VARX}
 \end{center} 
-\noindent The point of a VARX is that one does not need matrix manipulation to identify the structural coefficient. We use an exogenous variable $x$ and put it directly into the reduced-form VAR. Hence, in companion form, the model looks like the following: 
+\noindent The point of a VARX is that one does not need matrix manipulation to identify the structural coefficient. We use an exogenous variable $x$ and put it directly into the reduced-form VAR. Hence, in companion form, the model looks like the following (where again we omit the constant): 
 \[
 Y_t = \mathcal{Z} Y_{t-1} + \mathcal{B}x_t + U_t,
 \]
@@ -348,7 +348,7 @@ y_{t-p+1} \\
 x_t \\
 x_{t-1} \\
 \vdots \\
-x_{t-p+1} 
+x_{t-s+1} 
 \end{bmatrix},
 \quad
 \mathcal{Z} := 
@@ -392,7 +392,37 @@ I_M \\
 where note that $Y_t$ and $U_t$ are $(Kp+Ms)\times1$ because $M$ is the number of exogenous variables and $s$ is the number of their lags. 
 Looking at the companion matrix $\mathcal{Z}$, the upper-left matrix $(Kp\times Kp)$ belongs to the well-known companion matrix of the endogenous variables, while the upper right one to the exogenous ones $(Kp\times Ms)$. 
 The bottom matrices are the ones that make the system fall into a normal reduced-form VAR representation. The bottom left has dimension $(Ms \times Kp)$ and the right one $(Ms \times Ms)$. The full dimension is thus $(Kp \times Ms)\times (Kp \times Ms)$. Finally,
-$\mathcal{B}$ has the dimensions $(Kp \times Ms)\times M$ and holds the contemporaneous effects of exogenous variables on the system - the most important ones. 
+$\mathcal{B}$ has the dimensions $(Kp \times Ms)\times M$ and holds the contemporaneous effects of exogenous variables in the system - the most important ones. Again, doing a recursive substitution of $Y_{t}$, we get: 
+\[
+Y_t = \mathcal{Z} (\mathcal{Z} Y_{t-2} + \mathcal{B}x_{t-1} + U_{t-1}) + \mathcal{B}x_{t} + U_t,
+\]
+which is equal to:
+\[
+Y_t = \mathcal{Z}^2Y_{t-2} + \mathcal{Z}\mathcal{B}x_{t-1} +\mathcal{Z} U_{t-1} + \mathcal{B}x_{t} + U_t
+\]
+and at $h$ step results in:
+\[
+Y_{t} = \mathcal{Z}^h Y_{t-h} + \sum_{i=0}^{h-1} \mathcal{Z}^i B x_{t-i} + \sum_{i=0}^{h-1} \mathcal{Z}^i U_{t-i}.
+\]
+and at $\infty$, the first term disappears (again due to $\mathcal{Z}^\infty$ converging to 0 if $y_t$ is a stable stationary process):
+\[
+Y_{t} = \sum_{i=0}^{\infty} \mathcal{Z}^i B x_{t-i} + \sum_{i=0}^{\infty} \mathcal{Z}^i U_{t-i}
+\]
+employing the selection matrix $J$ (now of dimension $K\times(Kp+Ms)$, but of the same shape as before), we can get the coefficient matrices of the exogenous variables as well as our normal MA coefficients:
+\[
+y_{t} = \sum_{i=0}^{\infty} J\mathcal{Z}^i B x_{t-i} + \sum_{i=0}^{\infty} J\mathcal{Z}^i J'u_{t-i}
+\]
+where we have used the fact that 
+\[J'JU_t=
+\begin{bmatrix}
+u_t \\
+0 \\
+\vdots \\
+0
+\end{bmatrix}
+\]
+
+
 \begin{center}
 \textbf{4. Proxy-VAR}
 \end{center}
